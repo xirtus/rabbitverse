@@ -1,5 +1,7 @@
 # 🐰 RABBITVERSE — a multiverse mascot platformer (Three.js / WebGL)
 
+![RABBITVERSE title](docs/screenshot.jpg)
+
 An original AAA-style third-person 3D platformer vertical slice, built with Three.js.
 Benchmark target: *Crash Bandicoot: Warped* / *Crash 4: It's About Time* game feel.
 
