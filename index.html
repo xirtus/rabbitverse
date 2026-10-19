@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+<title>RABBITVERSE</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐰</text></svg>"/>
+<style>
+  :root{
+    --carrot:#ff8c2e; --gem:#41e6ff; --ink:#1d1130;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-user-select:none;user-select:none}
+  html,body{width:100%;height:100%;overflow:hidden;background:#0b0618}
+  body{font-family:"Avenir Next Rounded","Baloo 2","Nunito",ui-rounded,system-ui,sans-serif;font-weight:800}
+  #app,#app canvas{position:absolute;inset:0;width:100%;height:100%}
+  #app canvas{display:block}
+  /* ---------- HUD ---------- */
+  #hud{position:absolute;inset:0;pointer-events:none;z-index:5;opacity:0;transition:opacity .4s}
+  #hud.on{opacity:1}
+  .pill{position:absolute;display:flex;align-items:center;gap:.45em;color:#fff;
+    background:linear-gradient(180deg,rgba(29,17,48,.72),rgba(29,17,48,.55));
+    border:2px solid rgba(255,255,255,.28);border-radius:999px;padding:.28em .9em .28em .6em;
+    font-size:clamp(15px,2.1vmin,22px);letter-spacing:.02em;
+    text-shadow:0 2px 0 rgba(0,0,0,.45);box-shadow:0 4px 14px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.25);
+    backdrop-filter:blur(3px)}
+  .pill .ic{width:1.35em;height:1.35em;display:grid;place-items:center;filter:drop-shadow(0 2px 2px rgba(0,0,0,.4))}
+  .pill .ic svg{width:100%;height:100%}
+  #hudCarrots{top:14px;left:14px}
+  #hudCrates{top:calc(14px + 2.6em);left:14px}
+  #hudLives{top:calc(14px + 5.2em);left:14px}
+  #hudGems{top:14px;right:14px;gap:.35em;padding:.35em .7em}
+  #hudGems .gem{width:1.15em;height:1.15em;border-radius:28%;transform:rotate(45deg);
+    background:rgba(255,255,255,.10);border:2px solid rgba(255,255,255,.35);transition:all .3s}
+  #hudGems .gem.got{background:linear-gradient(135deg,#8ff7ff,#2bb8ff 60%,#7e5bff);
+    border-color:#dffaff;box-shadow:0 0 12px #4fe3ff, inset 0 0 6px #fff}
+  #hudPower{top:calc(14px + 2.6em);right:14px;display:none;color:#dffaff}
+  #hudPower.on{display:flex;animation:powerPulse 1s infinite}
+  @keyframes powerPulse{50%{box-shadow:0 0 22px rgba(79,227,255,.8), inset 0 1px 0 rgba(255,255,255,.25)}}
+  #hudBoss{bottom:26px;left:50%;transform:translateX(-50%);width:min(560px,70vw);display:none;
+    flex-direction:column;gap:6px;align-items:center}
+  #hudBoss.on{display:flex}
+  #hudBoss .name{color:#fff;font-size:clamp(15px,2.4vmin,24px);letter-spacing:.12em;text-transform:uppercase;
+    text-shadow:0 3px 0 rgba(0,0,0,.5),0 0 18px rgba(255,90,140,.6)}
+  #hudBoss .bar{width:100%;height:16px;border-radius:99px;border:2px solid rgba(255,255,255,.5);
+    background:rgba(0,0,0,.45);overflow:hidden;box-shadow:0 4px 14px rgba(0,0,0,.4)}
+  #hudBoss .fill{height:100%;width:100%;border-radius:99px;transition:width .35s cubic-bezier(.2,.9,.3,1.4);
+    background:linear-gradient(90deg,#ff3d6e,#ff9a3d);box-shadow:inset 0 2px 0 rgba(255,255,255,.4)}
+  #toast{position:absolute;top:18%;left:50%;transform:translate(-50%,-50%) scale(.6);opacity:0;
+    color:#fff;font-size:clamp(22px,4.6vmin,46px);letter-spacing:.06em;text-transform:uppercase;
+    text-shadow:0 4px 0 rgba(0,0,0,.45),0 0 30px rgba(255,255,255,.35);white-space:nowrap}
+  #toast.pop{animation:toastPop 1.6s cubic-bezier(.2,1.4,.4,1) forwards}
+  @keyframes toastPop{12%{opacity:1;transform:translate(-50%,-50%) scale(1.06)}
+    20%{transform:translate(-50%,-50%) scale(1)} 78%{opacity:1} 100%{opacity:0;transform:translate(-50%,-58%) scale(1)}}
+  #combo{position:absolute;top:26%;left:50%;transform:translateX(-50%);color:#ffe45e;
+    font-size:clamp(14px,2.4vmin,24px);text-shadow:0 2px 0 rgba(0,0,0,.5);opacity:0;transition:opacity .2s}
+  /* vignette / damage / slowmo overlays */
+  .ovl{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .25s}
+  #dmg{background:radial-gradient(ellipse at center,transparent 52%,rgba(255,30,40,.55) 100%)}
+  #slow{transition:opacity .4s;background:radial-gradient(ellipse at center,rgba(64,200,255,.06) 30%,rgba(30,120,255,.28) 100%);
+    backdrop-filter:saturate(.7)}
+  /* ---------- Screens ---------- */
+  .screen{position:absolute;inset:0;z-index:10;display:grid;place-items:center;pointer-events:auto;
+    background:radial-gradient(120% 100% at 50% 0%,rgba(24,10,52,.42),rgba(8,4,20,.72));
+    opacity:0;visibility:hidden;transition:opacity .45s,visibility .45s}
+  .screen.on{opacity:1;visibility:visible}
+  .panel{text-align:center;color:#fff;max-width:min(680px,88vw)}
+  .logo{font-size:clamp(44px,10vmin,104px);line-height:.95;letter-spacing:.02em;
+    background:linear-gradient(180deg,#fff 18%,#ffd23e 42%,#ff8c2e 72%,#e23c8e);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 6px 0 rgba(0,0,0,.45)) drop-shadow(0 0 34px rgba(255,140,46,.45));
+    transform:rotate(-2.5deg)}
+  .logo small{display:block;font-size:.32em;letter-spacing:.5em;color:#9feaff;-webkit-text-fill-color:#9feaff;
+    filter:none;transform:rotate(0);margin-top:.4em}
+  .btn{pointer-events:auto;cursor:pointer;display:inline-block;margin:.5em .35em 0;padding:.55em 1.5em;
+    font:inherit;font-size:clamp(15px,2.4vmin,22px);color:#2b1400;letter-spacing:.05em;text-transform:uppercase;
+    background:linear-gradient(180deg,#ffe45e,#ffb02e);border:none;border-radius:999px;
+    box-shadow:0 5px 0 #b35c12,0 10px 24px rgba(0,0,0,.5);transition:transform .12s,box-shadow .12s}
+  .btn:hover{transform:translateY(-2px) scale(1.03)}
+  .btn:active{transform:translateY(2px);box-shadow:0 2px 0 #b35c12}
+  .btn.ghost{background:linear-gradient(180deg,#3b2a63,#241541);color:#fff;box-shadow:0 5px 0 #150b2c,0 10px 24px rgba(0,0,0,.5)}
+  .hint{margin-top:1.2em;font-size:clamp(12px,1.9vmin,17px);color:#cdbfff;font-weight:600;line-height:1.9}
+  .hint b{color:#ffe45e}
+  kbd{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);border-bottom-width:3px;
+    border-radius:7px;padding:.05em .5em;font-family:inherit;font-weight:800}
+  /* results */
+  .cards{display:flex;gap:14px;justify-content:center;margin-top:1em;flex-wrap:wrap}
+  .card{background:linear-gradient(180deg,rgba(255,255,255,.13),rgba(255,255,255,.05));
+    border:2px solid rgba(255,255,255,.25);border-radius:18px;padding:.8em 1.3em;min-width:110px}
+  .card .v{font-size:clamp(20px,4vmin,36px);color:#ffe45e}
+  .card .k{font-size:clamp(10px,1.6vmin,13px);letter-spacing:.18em;color:#cdbfff;text-transform:uppercase}
+  #load{position:absolute;inset:0;z-index:20;display:grid;place-items:center;background:#0b0618;color:#fff;
+    transition:opacity .5s;font-size:clamp(14px,2vmin,20px);letter-spacing:.3em}
+  #load .bun{font-size:3em;animation:hop .6s infinite alternate cubic-bezier(.4,0,.6,1)}
+  @keyframes hop{to{transform:translateY(-18px) scale(1.05,.95)}}
+  #fps{position:absolute;bottom:8px;left:10px;z-index:30;color:#7f8;font:600 12px/1.2 monospace;
+    text-shadow:0 1px 2px #000;display:none;white-space:pre}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<div id="hud">
+  <div class="pill" id="hudCarrots"><span class="ic" data-ic="carrot"></span><span id="vCarrots">0</span></div>
+  <div class="pill" id="hudCrates"><span class="ic" data-ic="crate"></span><span id="vCrates">0/0</span></div>
+  <div class="pill" id="hudLives"><span class="ic" data-ic="bun"></span><span id="vLives">3</span></div>
+  <div class="pill" id="hudPower"><span class="ic" data-ic="clock"></span><span>TIME SLOW</span></div>
+  <div class="pill" id="hudGems"><span class="gem" id="gem0"></span><span class="gem" id="gem1"></span><span class="gem" id="gem2"></span></div>
+  <div id="hudBoss"><div class="name" id="bossName">KING SNARLTOOTH</div><div class="bar"><div class="fill" id="bossFill"></div></div></div>
+  <div id="toast"></div><div id="combo"></div>
+</div>
+<div class="ovl" id="dmg"></div>
+<div class="ovl" id="slow"></div>
+
+<div class="screen" id="scrTitle"><div class="panel">
+  <div class="logo">RABBIT<wbr>VERSE<small>A MULTIVERSE PLATFORMER</small></div>
+  <div style="margin-top:1.6em"><button class="btn" id="btnPlay">▶ Play</button>
+  <button class="btn ghost" id="btnHow">How to play</button></div>
+  <div class="hint" id="howPanel" style="display:none;text-align:left">
+    <b>MOVE</b> WASD / Left Stick &nbsp; <b>JUMP</b> Space (hold = higher, again = double jump)<br>
+    <b>SPIN</b> J / X &nbsp; <b>SLIDE</b> K / C while running &nbsp; <b>BODY SLAM</b> K in air<br>
+    <b>CAMERA</b> Q / E or Right Stick &nbsp; <b>PAUSE</b> Esc / P<br>
+    Break every crate. Grab every carrot. Fix reality. 🥕
+  </div>
+  <div class="hint">Gamepad supported • WebGL</div>
+</div></div>
+
+<div class="screen" id="scrPause"><div class="panel">
+  <div class="logo" style="font-size:clamp(30px,6vmin,56px)">PAUSED</div>
+  <div style="margin-top:1em"><button class="btn" id="btnResume">Resume</button>
+  <button class="btn ghost" id="btnRestart">Restart Level</button>
+  <button class="btn ghost" id="btnQuit">Title</button></div>
+</div></div>
+
+<div class="screen" id="scrResults"><div class="panel">
+  <div class="logo" style="font-size:clamp(30px,6.5vmin,60px)">LEVEL CLEAR!</div>
+  <div class="cards">
+    <div class="card"><div class="v" id="rCarrots">0</div><div class="k">Carrots</div></div>
+    <div class="card"><div class="v" id="rCrates">0/0</div><div class="k">Crates</div></div>
+    <div class="card"><div class="v" id="rDeaths">0</div><div class="k">Deaths</div></div>
+    <div class="card"><div class="v" id="rTime">0:00</div><div class="k">Time</div></div>
+    <div class="card"><div class="v" id="rGems">—</div><div class="k">Gems</div></div>
+  </div>
+  <div style="margin-top:1.4em"><button class="btn" id="btnAgain">Replay</button>
+  <button class="btn ghost" id="btnTitle2">Title</button></div>
+</div></div>
+
+<div class="screen" id="scrGameOver"><div class="panel">
+  <div class="logo" style="font-size:clamp(30px,6vmin,56px)">GAME OVER</div>
+  <div style="margin-top:1em"><button class="btn" id="btnRetry">Retry Level</button></div>
+</div></div>
+
+<div id="load"><div style="text-align:center"><div class="bun">🐰</div>LOADING RABBITVERSE…</div></div>
+<div id="fps"></div>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>
